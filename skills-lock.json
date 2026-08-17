@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "skills": {
+    "backend-patterns": {
+      "source": "affaan-m/ECC",
+      "sourceType": "github",
+      "skillPath": "skills/backend-patterns/SKILL.md",
+      "computedHash": "45bf0c6abd0549b56142690f49437bc59c7b4f55b62dc7717ef295ec6ed6617f"
+    },
+    "frontend-design-principles": {
+      "source": "joshuadavidthomas/agent-skills",
+      "sourceType": "github",
+      "skillPath": "frontend-design-principles/SKILL.md",
+      "computedHash": "1fdc76bab8b03502706c523414f0434ed03f8b8754821dc6630c9fe2d00a2933"
+    },
+    "frontend-ui-engineering": {
+      "source": "addyosmani/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-ui-engineering/SKILL.md",
+      "computedHash": "cb4e981ecb5f701b451fc4e937a38049b49fd4523f213e06cffbd00b007060dc"
+    },
+    "nodejs-backend-patterns": {
+      "source": "sickn33/agentic-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/nodejs-backend-patterns/SKILL.md",
+      "computedHash": "912fa183d031f99b16bfdf29bbedb3dd11e5a59aa48d880777e1497db1e16b5c"
+    },
+    "vite": {
+      "source": "antfu/skills",
+      "sourceType": "github",
+      "skillPath": "skills/vite/SKILL.md",
+      "computedHash": "867ff66238f3152e9c494339ad08dc432dd0df5bcf5cc7a00b61a72b580eb908"
+    }
+  }
+}
