@@ -1,112 +1,213 @@
 # Mobile Sales Force (MSF)
 
-Aplikasi manajemen kunjungan tenaga penjual farmasi PT Mersifarma — monorepo full-stack dengan Express backend dan React frontend.
+Aplikasi manajemen kunjungan tenaga penjual farmasi PT Mersifarma — monorepo full-stack untuk mengelola Call List, Call Plan, dan Call Actual secara digital.
+
+---
+
+## Tech Stack
+
+**Backend**
+- **Node.js 18+** — runtime
+- **Native HTTP Module** — custom request handler & router (tanpa Express)
+- **PostgreSQL 14+** — database relasional
+- **pg (node-postgres)** — database driver
+- **dotenv** — environment variable management
+- **cors** — Cross-Origin Resource Sharing
+- **Jest + Supertest** — backend testing
+
+**Frontend**
+- **React 18** — UI library
+- **Vite 5** — build tool + dev server + HMR
+- **React Router v6** — client-side routing
+- **Axios** — HTTP client dengan interceptors
+- **Vitest + React Testing Library** — frontend unit testing
+- **Vanilla CSS** — custom design system tokens (tanpa Tailwind)
+
+**Autentikasi**
+- Bearer token (hardcoded per user, tanpa JWT library)
+- 5 user bawaan: Andi (MR), Sari (MR), Doni (DM), Citra (RSM), Budi (MM)
 
 ---
 
 ## Prerequisites
 
-- **Node.js** 18+
-- **PostgreSQL** 14+
-- **psql** CLI (terinstal bersama PostgreSQL)
+Pastikan tools berikut sudah terinstal:
+
+- **Node.js** 18+ — [https://nodejs.org](https://nodejs.org)
+- **PostgreSQL** 14+ — harus sudah running
+- **psql** CLI — terinstal bersama PostgreSQL
 
 ---
 
-## Backend Setup
+## Cara Install & Run
+
+### 1. Clone Repository
 
 ```bash
-# 1. Salin file environment dan isi DATABASE_URL
-cp backend/.env.example backend/.env
-# Edit backend/.env → set DATABASE_URL=postgres://user:password@localhost:5432/msf_db
-
-# 2. Buat schema database
-psql -f backend/db/schema.sql
-
-# 3. Seed data awal (users, master_customers, products)
-node backend/db/seed.js
-
-# 4. Jalankan server
-node backend/server.js
-# Server berjalan di http://localhost:3000
+git clone https://github.com/<username>/mobile-sales-force.git
+cd mobile-sales-force
 ```
 
----
-
-## Frontend Setup
+### 2. Setup Database
 
 ```bash
-# 1. Salin file environment (opsional — proxy sudah dikonfigurasi via Vite)
-cp frontend/.env.example frontend/.env
+# Buat database (jika belum ada)
+createdb msf_db
 
-# 2. Install dependencies
+# Jalankan schema
+psql -d msf_db -f backend/db/schema.sql
+
+# Seed data awal — pilih salah satu:
+psql -d msf_db -f backend/db/seed.sql    # SQL langsung
+# atau
+node backend/db/seed.js                   # JavaScript (Node.js)
+```
+
+### 3. Setup & Jalankan Backend
+
+```bash
+# Salin file environment
+cp backend/.env.example backend/.env
+
+# Edit backend/.env → isi DATABASE_URL sesuai konfigurasi lokal Anda:
+# DATABASE_URL=postgresql://postgres:password@localhost:5432/msf_db
+
+# Install dependencies
+cd backend && npm install
+
+# Jalankan server
+node server.js
+# ✅ Server berjalan di http://localhost:3000
+```
+
+### 4. Setup & Jalankan Frontend
+
+```bash
+# Buka terminal baru, dari root project:
 cd frontend && npm install
 
-# 3. Jalankan dev server
+# Jalankan dev server
 npm run dev
-# Frontend berjalan di http://localhost:5173
+# ✅ Frontend berjalan di http://localhost:5173
 ```
 
-> **Catatan:** Vite dikonfigurasi dengan proxy `/api → http://localhost:3000`, sehingga frontend dan backend dapat berjalan secara bersamaan tanpa CORS issue saat development.
+### 5. Buka Aplikasi
+
+1. Buka browser → `http://localhost:5173`
+2. Pilih salah satu dari 5 kartu user untuk login
+3. Mulai gunakan aplikasi
+
+> **Catatan:** Vite dikonfigurasi dengan proxy `/api → http://localhost:3000`, sehingga frontend dan backend dapat berjalan bersamaan tanpa CORS issue.
 
 ---
 
-## Token Reference
-
-| User  | Role | Token       |
-|-------|------|-------------|
-| Budi  | MM   | `token-mm`  |
-| Citra | RSM  | `token-rsm` |
-| Doni  | DM   | `token-dm`  |
-| Andi  | MR1  | `token-mr1` |
-| Sari  | MR2  | `token-mr2` |
-
-**Hierarki:** MM → RSM → DM → MR  
-Setiap supervisor hanya bisa approve call list dari **bawahan langsungnya** (DM → MR, RSM → DM, MM → RSM).
-
----
-
-## Endpoint List
-
-| Method | Path | Role Required | Deskripsi |
-|--------|------|---------------|-----------|
-| GET    | `/health` | — | Health check (no auth) |
-| GET    | `/api/mcl` | Any | Daftar master customers (dokter) |
-| GET    | `/api/products` | Any | Daftar produk |
-| GET    | `/api/call-lists` | Any | MR: list milik sendiri; DM/RSM/MM: list submitted dari bawahan langsung |
-| POST   | `/api/call-lists` | MR | Buat/update call list (upsert jika draft bulan sama) |
-| GET    | `/api/call-lists/:id` | Any | Detail call list beserta daftar dokter |
-| PATCH  | `/api/call-lists/:id/submit` | MR | Submit call list (draft → submitted) |
-| PATCH  | `/api/call-lists/:id/approve` | DM/RSM/MM | Approve atau reject call list |
-| GET    | `/api/call-plans` | MR | Daftar call plan milik sendiri |
-| POST   | `/api/call-plans` | MR | Buat call plan (call list harus approved) |
-| GET    | `/api/call-actuals` | MR | Daftar kunjungan aktual milik sendiri |
-| POST   | `/api/call-actuals` | MR | Catat kunjungan aktual |
-
----
-
-## Test Commands
+## Menjalankan Test
 
 ```bash
-# Backend tests
+# Backend tests (Jest)
 cd backend && npm test
 
-# Frontend tests
+# Frontend tests (Vitest) — 14 tests
 cd frontend && npm test
 ```
 
 ---
 
-## Test Scenarios
+## Arsitektur & Struktur Folder
 
-Skenario-skenario berikut dapat dijalankan via `curl` atau Postman. Pastikan backend berjalan di `localhost:3000` dan seed data sudah dijalankan.
+```
+mobile-sales-force/
+├── backend/                Express + pg (Node.js)
+│   ├── .env.example        Template environment variables
+│   ├── server.js           Entry point (listen port 3000)
+│   ├── db/
+│   │   ├── schema.sql      DDL — 8 tabel relasional
+│   │   ├── seed.sql        DML — data master (SQL)
+│   │   └── seed.js         Seed script (Node.js alternatif)
+│   ├── logs/               Auto-generated log files
+│   │   ├── activity.log    Track user requests
+│   │   └── error.log       Track system & HTTP errors
+│   ├── src/
+│       ├── app.js           Native HTTP request handler + router
+│       ├── config/db.js     PostgreSQL Pool
+│       ├── middleware/
+│       │   └── auth.js      authenticate() native module
+│       ├── utils/
+│       │   └── logger.js    Custom logging utility
+│       └── routes/
+│           ├── mcl.js       GET /api/mcl, GET /api/products
+│           ├── callList.js  CRUD + submit + approve Call List
+│           ├── callPlan.js  POST + GET Call Plan
+│           └── callActual.js POST + GET Call Actual
+│
+├── frontend/               React + Vite
+│   ├── vite.config.js      Vite config + API proxy + Vitest
+│   ├── index.html          Entry point HTML
+│   └── src/
+│       ├── main.jsx         React root (AuthProvider)
+│       ├── App.jsx          Layout shell (NavBar + Toast + Router)
+│       ├── index.css        Design system CSS tokens
+│       ├── api/
+│       │   └── axiosClient.js  Axios + interceptors
+│       ├── context/
+│       │   ├── AuthContext.jsx  Login/logout, localStorage
+│       │   └── ToastContext.jsx Toast notifications
+│       ├── hooks/              Data fetching hooks
+│       ├── router/             Routes + PrivateRoute guard
+│       ├── components/         Forms, tables, NavBar, Spinner
+│       └── pages/              Login, CallList, CallPlan, CallActual
+│
+└── README.md
+```
 
 ---
 
+## Token Reference
+
+- **Budi** — MM — `token-mm`
+- **Citra** — RSM — `token-rsm`
+- **Doni** — DM — `token-dm`
+- **Andi** — MR — `token-mr1`
+- **Sari** — MR — `token-mr2`
+
+**Hierarki approval:** MM → RSM → DM → MR  
+Setiap supervisor hanya bisa approve call list dari **bawahan langsungnya** (DM approve MR, RSM approve DM, MM approve RSM).
+
+---
+
+## Endpoint List
+
+**Master Data (tanpa auth role tertentu)**
+- `GET /health` — health check
+- `GET /api/mcl` — daftar master customers (dokter)
+- `GET /api/products` — daftar produk
+
+**Call List**
+- `POST /api/call-lists` — MR buat call list (bulan + doctor_ids)
+- `GET /api/call-lists` — MR: list sendiri; Supervisor: list submitted bawahan
+- `GET /api/call-lists/:id` — detail call list + daftar dokter
+- `PATCH /api/call-lists/:id/submit` — MR submit (draft → submitted)
+- `PATCH /api/call-lists/:id/approve` — DM/RSM/MM approve atau reject
+
+**Call Plan**
+- `POST /api/call-plans` — MR buat call plan (CL harus approved)
+- `GET /api/call-plans` — list call plan milik MR
+
+**Call Actual**
+- `POST /api/call-actuals` — MR catat kunjungan aktual
+- `GET /api/call-actuals` — list kunjungan aktual milik MR
+
+---
+
+## Test Scenarios
+
+Skenario berikut dapat dijalankan via `curl` atau Postman. Pastikan backend berjalan di `localhost:3000` dan seed data sudah dijalankan.
+
 ### Skenario 1 — Happy Path: End-to-End Flow
 
-**Alur:** MR membuat Call List → submit → DM approve → MR membuat Call Plan → MR mencatat Call Actual.
+**Alur:** MR buat Call List → submit → DM approve → buat Call Plan → catat Call Actual.
 
-#### Step 1: MR (Andi) membuat Call List
+**Step 1: MR (Andi) buat Call List**
 
 ```bash
 curl -s -X POST http://localhost:3000/api/call-lists \
@@ -115,40 +216,18 @@ curl -s -X POST http://localhost:3000/api/call-lists \
   -d '{"month": "2026-08", "doctor_ids": [1, 2, 3]}' | jq
 ```
 
-**Expected response (201):**
-```json
-{
-  "status": "success",
-  "data": {
-    "id": 1,
-    "user_id": 4,
-    "month": "2026-08-01T00:00:00.000Z",
-    "status": "draft",
-    "doctors": [
-      { "id": 1, "name": "Dr. Ahmad Santoso", "specialization": "Umum" },
-      { "id": 2, "name": "Dr. Budi Prasetyo", "specialization": "Jantung" },
-      { "id": 3, "name": "Dr. Citra Dewi", "specialization": "Paru" }
-    ]
-  }
-}
-```
+Expected: `201` — status `draft`, doctors array berisi 3 dokter.
 
-#### Step 2: MR submit Call List
+**Step 2: MR submit Call List**
 
 ```bash
 curl -s -X PATCH http://localhost:3000/api/call-lists/1/submit \
   -H "Authorization: Bearer token-mr1" | jq
 ```
 
-**Expected response (200):**
-```json
-{
-  "status": "success",
-  "data": { "id": 1, "status": "submitted", ... }
-}
-```
+Expected: `200` — status berubah ke `submitted`.
 
-#### Step 3: DM (Doni) approve Call List
+**Step 3: DM (Doni) approve Call List**
 
 ```bash
 curl -s -X PATCH http://localhost:3000/api/call-lists/1/approve \
@@ -157,15 +236,9 @@ curl -s -X PATCH http://localhost:3000/api/call-lists/1/approve \
   -d '{"status": "approved"}' | jq
 ```
 
-**Expected response (200):**
-```json
-{
-  "status": "success",
-  "data": { "id": 1, "status": "approved", "approved_by": 3, ... }
-}
-```
+Expected: `200` — status `approved`, `approved_by: 3`.
 
-#### Step 4: MR buat Call Plan
+**Step 4: MR buat Call Plan**
 
 ```bash
 curl -s -X POST http://localhost:3000/api/call-plans \
@@ -174,173 +247,102 @@ curl -s -X POST http://localhost:3000/api/call-plans \
   -d '{"call_list_id": 1, "doctor_id": 1, "visit_date": "2026-08-15", "visit_time": "09:00"}' | jq
 ```
 
-**Expected response (201):**
-```json
-{
-  "status": "success",
-  "data": { "id": 1, "call_list_id": 1, "doctor_id": 1, "visit_date": "2026-08-15", ... }
-}
-```
+Expected: `201` — call plan terbuat.
 
-#### Step 5: MR catat Call Actual (Terencana)
+**Step 5: MR catat Call Actual (Terencana)**
 
 ```bash
-    curl -s -X POST http://localhost:3000/api/call-actuals \
-      -H "Authorization: Bearer token-mr1" \
-      -H "Content-Type: multipart/form-data" \
-      -F "plan_id=1" \
-      -F "doctor_id=1" \
-      -F "visit_date=2026-08-15" \
-      -F "check_in_time=09:05" \
-      -F "check_out_time=09:45" \
-      -F "photo=@/path/to/photo.jpg" \
-      -F "signature=@/path/to/signature.png" \
-      -F "detailing=[{\"product_id\":1},{\"product_id\":2}]" | jq
+curl -s -X POST http://localhost:3000/api/call-actuals \
+  -H "Authorization: Bearer token-mr1" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "plan_id": 1,
+    "doctor_id": 1,
+    "visit_date": "2026-08-15",
+    "check_in_time": "09:05",
+    "check_out_time": "09:45",
+    "photo_url": "https://storage.example.com/photos/visit-001.jpg",
+    "signature_url": "https://storage.example.com/signatures/sign-001.png",
+    "detailing": [{"product_id": 1}, {"product_id": 2}]
+  }' | jq
 ```
 
-**Expected response (201):**
-```json
-{
-  "status": "success",
-  "data": {
-    "id": 1,
-    "visit_type": "plan",
-    "status": "in_progress",
-    "products": [
-      { "id": 1, "name": "CardioMax", "category": "Kardiovaskular" },
-      { "id": 2, "name": "AmpicilinXR", "category": "Antibiotik" }
-    ]
-  }
-}
-```
+Expected: `201` — `visit_type: "plan"`, `status: "in_progress"`, products array.
 
 ---
 
 ### Skenario 2 — Error: Call Plan dari Call List yang Belum Approved
 
-MR mencoba membuat Call Plan dari Call List dengan status bukan `approved`.
-
 ```bash
-# Asumsikan call list ID 99 masih berstatus "draft" atau "submitted"
 curl -s -X POST http://localhost:3000/api/call-plans \
   -H "Authorization: Bearer token-mr1" \
   -H "Content-Type: application/json" \
   -d '{"call_list_id": 99, "doctor_id": 1, "visit_date": "2026-08-20"}' | jq
 ```
 
-**Expected response (422):**
-```json
-{
-  "status": "error",
-  "message": "Call list must be approved to create a call plan"
-}
-```
+Expected: `422` — `"Call list must be approved to create a call plan"`
 
 ---
 
 ### Skenario 3 — Error: Duplicate Visit (Dokter Sama, Hari Sama)
 
-MR mencoba mencatat kunjungan ke dokter yang sama pada tanggal yang sudah ada.
-
 ```bash
-# Kunjungan pertama (sukses)
 curl -s -X POST http://localhost:3000/api/call-actuals \
   -H "Authorization: Bearer token-mr1" \
   -H "Content-Type: application/json" \
   -d '{
-    "doctor_id": 2,
-    "visit_date": "2026-08-20",
-    "photo_url": "https://example.com/photo1.jpg",
-    "signature_url": "https://example.com/sign1.png",
-    "detailing": [{"product_id": 1}]
-  }' | jq
-
-# Kunjungan kedua ke dokter & tanggal yang sama → 409
-curl -s -X POST http://localhost:3000/api/call-actuals \
-  -H "Authorization: Bearer token-mr1" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "doctor_id": 2,
-    "visit_date": "2026-08-20",
-    "photo_url": "https://example.com/photo2.jpg",
-    "signature_url": "https://example.com/sign2.png",
+    "doctor_id": 2, "visit_date": "2026-08-20",
+    "photo_url": "https://example.com/photo.jpg",
+    "signature_url": "https://example.com/sign.png",
     "detailing": [{"product_id": 1}]
   }' | jq
 ```
 
-**Expected response pada kunjungan kedua (409):**
-```json
-{
-  "status": "error",
-  "message": "A call actual for this doctor on this date already exists"
-}
-```
+Expected (kunjungan kedua): `409` — `"A call actual for this doctor on this date already exists"`
 
 ---
 
 ### Skenario 4 — Error: Call Actual Tanpa `photo_url`
 
-MR submit Call Actual tanpa menyertakan `photo_url`.
-
 ```bash
 curl -s -X POST http://localhost:3000/api/call-actuals \
   -H "Authorization: Bearer token-mr1" \
   -H "Content-Type: application/json" \
   -d '{
-    "doctor_id": 3,
-    "visit_date": "2026-08-22",
-    "signature_url": "https://example.com/sign3.png",
+    "doctor_id": 3, "visit_date": "2026-08-22",
+    "signature_url": "https://example.com/sign.png",
     "detailing": [{"product_id": 1}]
   }' | jq
 ```
 
-**Expected response (422):**
-```json
-{
-  "status": "error",
-  "message": "photo_url is required"
-}
-```
+Expected: `422` — `"photo_url is required"`
 
 ---
 
 ### Skenario 5 — Error: Approve oleh Supervisor yang Bukan Atasan Langsung
 
-RSM (Citra) atau MM (Budi) mencoba approve Call List milik MR — padahal yang berhak hanya DM.
+RSM atau MM mencoba approve Call List milik MR — padahal yang berhak hanya DM.
 
 ```bash
-# RSM mencoba approve call list MR → 403
 curl -s -X PATCH http://localhost:3000/api/call-lists/1/approve \
   -H "Authorization: Bearer token-rsm" \
   -H "Content-Type: application/json" \
   -d '{"status": "approved"}' | jq
 ```
 
-**Expected response (403):**
-```json
-{
-  "status": "error",
-  "message": "Forbidden"
-}
-```
+Expected: `403` — `"Forbidden"`
 
-```bash
-# MM mencoba approve call list MR → 403
-curl -s -X PATCH http://localhost:3000/api/call-lists/1/approve \
-  -H "Authorization: Bearer token-mm" \
-  -H "Content-Type: application/json" \
-  -d '{"status": "approved"}' | jq
-```
+> **Mengapa?** `isDirectSupervisor()` memetakan `dm → mr`, `rsm → dm`, `mm → rsm`. RSM dan MM bukan atasan langsung MR, sehingga selalu ditolak.
 
-**Expected response (403):**
-```json
-{
-  "status": "error",
-  "message": "Forbidden"
-}
-```
+---
 
-> **Mengapa 403?** Fungsi `isDirectSupervisor(approverRole, ownerRole)` memetakan `dm → mr`, `rsm → dm`, `mm → rsm`. RSM dan MM bukan atasan langsung MR, sehingga selalu ditolak.
+## Logging & Monitoring
+
+Aplikasi ini dilengkapi dengan **Custom Logger Utility** yang berjalan murni menggunakan Native Node.js `fs` module, tanpa dependensi eksternal (seperti Winston/Morgan), untuk melacak aktivitas sistem secara otomatis.
+- **`logs/activity.log`**: Mencatat semua HTTP request masuk (Endpoint, Method, Timestamp). Sangat berguna sebagai **Audit Trail** untuk melihat siapa yang melakukan approval atau submit data.
+- **`logs/error.log`**: Menangkap semua *Unhandled Exception*, *Database Error*, dan *HTTP Error*. Stack trace dan meta data akan di-serialize dan disimpan dengan aman. Sistem di-desain tangguh agar kebal terhadap *Circular JSON reference* saat logging.
+
+Semua file log ini *auto-generated* saat aplikasi pertama kali mendeteksi request/error.
 
 ---
 
@@ -348,71 +350,26 @@ curl -s -X PATCH http://localhost:3000/api/call-lists/1/approve \
 
 ### Tools yang Digunakan
 
-| Tool | Fungsi |
-|------|--------|
-| **Antigravity (AI coding assistant)** | Scaffolding kode backend/frontend, menulis SQL schema, generate unit test, review logika bisnis |
-| **PostgreSQL + psql** | Database relasional untuk menyimpan semua data transaksional |
-| **Postman / curl** | Pengujian manual endpoint sebelum frontend siap |
-| **Vite** | Build tool frontend dengan HMR dan proxy API |
-| **Vitest + React Testing Library** | Unit testing komponen React |
+- **Antigravity (AI coding assistant)** — scaffolding kode backend/frontend, SQL schema, unit test, review logika bisnis
+- **PostgreSQL + psql** — database relasional untuk semua data transaksional
+- **Postman / curl** — pengujian manual endpoint sebelum frontend siap
+- **Vite** — build tool frontend dengan HMR dan proxy API
+- **Vitest + React Testing Library** — unit testing komponen React
 
 ### Contoh Output Tools: Diterima vs Ditolak
 
 **Diterima:**  
-Output AI untuk `isDirectSupervisor` menghasilkan implementasi `{ dm: 'mr', rsm: 'dm', mm: 'rsm' }` yang akurat sesuai spesifikasi hierarki. Logika ini diverifikasi dengan 6 test case (semua pasangan valid dan invalid) sebelum diintegrasikan.
+Output AI untuk `isDirectSupervisor` menghasilkan implementasi `{ dm: 'mr', rsm: 'dm', mm: 'rsm' }` yang akurat sesuai spesifikasi hierarki. Diverifikasi dengan 6 test case sebelum diintegrasikan.
 
 **Ditolak:**  
-Saat AI pertama kali menggenerate endpoint `PATCH /approve`, response untuk rejection tidak mereset status ke `draft` (hanya mengubah ke `rejected`). Output ini ditolak karena bertentangan dengan requirement 5.5 yang menyatakan rejection harus reset ke draft agar MR bisa revisi. Kode direvisi dengan `SET status = 'draft'` pada branch rejected.
+Endpoint `PATCH /approve` awalnya tidak mereset status ke `draft` saat rejection — hanya mengubah ke `rejected`. Ditolak karena bertentangan dengan business rule bahwa rejection harus reset ke draft agar MR bisa revisi dan resubmit.
 
 **Ditolak (lain):**  
-Pada versi awal `resolveVisitType`, AI menggunakan string interpolation dalam query SQL. Output ini langsung ditolak karena membuka SQL injection vulnerability. Versi final menggunakan parameterized query `$1`, `$2`, `$3` secara konsisten.
+`resolveVisitType` awalnya menggunakan string interpolation dalam query SQL (risiko SQL injection). Langsung ditolak, diganti parameterized query `$1`, `$2`, `$3`.
 
 ### Pendekatan Validasi Output Tools
 
-1. **Review logika bisnis** — setiap fungsi kritis (isDirectSupervisor, resolveVisitType) diverifikasi manual terhadap spesifikasi requirement sebelum dikomit
-2. **Jalankan manual via curl** — setiap endpoint diuji dengan happy path dan edge case (tanpa token, token salah, role salah) sebelum frontend dibangun
-3. **Schema SQL cross-check** — kolom dan constraint di schema.sql diverifikasi terhadap tabel requirements (kolom CHECK, UNIQUE, ON DELETE CASCADE)
-4. **Security review** — semua query SQL diperiksa untuk memastikan tidak ada string interpolation; hanya parameterized query yang diizinkan
-
-### Arsitektur Singkat
-
-```
-monorepo/
-├── backend/          Express + pg (Node.js)
-│   ├── db/           schema.sql + seed.js
-│   └── src/
-│       ├── config/   db.js (pg Pool)
-│       ├── middleware/auth.js (Bearer token)
-│       └── routes/   mcl, callList, callPlan, callActual
-└── frontend/         React + Vite
-    └── src/
-        ├── api/      axiosClient.js (interceptors)
-        ├── context/  AuthContext, ToastContext
-        ├── hooks/    useCallLists, useCallPlans, useCallActuals, useMCL, useProducts
-        ├── components/ NavBar, forms, tables, Spinner
-        └── pages/    Login, CallList, CallPlan, CallActual
-```
-
-**Cara menjalankan:**
-1. `node backend/server.js` → backend di port 3000
-2. `cd frontend && npm run dev` → frontend di port 5173
-3. Buka `http://localhost:5173`, pilih user, mulai gunakan aplikasi
-
----
-
-## Notes
-
-- **File uploads**: The backend accepts multipart/form-data for `POST /api/call-actuals`. Use `-F "photo=@/path/to/photo.jpg"` and `-F "signature=@/path/to/sign.png"` in `curl` or send files from your client as `FormData`. If `multer` is not installed in your environment, the server falls back to accepting `photo_url` and `signature_url` fields (legacy mode).
-
-- **Structured errors**: API responses use a structured error format for client-friendly handling. Error responses follow this shape:
-
-```json
-{
-  "status": "error",
-  "message": "Human readable message",
-  "code": "optional_machine_code",
-  "details": "optional technical details"
-}
-```
-
-- **Commit & push**: This README change will be committed and pushed to your repository.
+1. **Review logika bisnis** — fungsi kritis diverifikasi manual terhadap spesifikasi sebelum dikomit
+2. **Jalankan manual via curl** — setiap endpoint diuji dengan happy path dan edge case
+3. **Schema cross-check** — constraint di schema.sql diverifikasi (CHECK, UNIQUE, ON DELETE CASCADE)
+4. **Security review** — semua query SQL hanya menggunakan parameterized query

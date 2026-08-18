@@ -29,7 +29,7 @@ CREATE TABLE call_lists (
   user_id     INTEGER NOT NULL REFERENCES users(id),
   month       DATE    NOT NULL,
   status      VARCHAR(20) NOT NULL DEFAULT 'draft'
-              CHECK (status IN ('draft','submitted','approved','rejected')),
+              CHECK (status IN ('draft','submitted','pending_approval','approved','rejected')),
   approved_by INTEGER REFERENCES users(id),
   reason      TEXT,
   created_at  TIMESTAMP DEFAULT NOW(),

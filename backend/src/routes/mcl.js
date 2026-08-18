@@ -1,32 +1,22 @@
 'use strict';
 
-const { Router } = require('express');
 const pool = require('../config/db');
+const { NotFound } = require('../utils/errors');
 
-const router = Router();
-
-// GET /api/mcl
-router.get('/mcl', async (req, res, next) => {
-  try {
+module.exports = async function mclHandler(req, res, resource, segments) {
+  if (req.method === 'GET' && resource === 'mcl' && segments.length === 0) {
     const result = await pool.query(
       'SELECT id, name, specialization, address, phone FROM master_customers ORDER BY name'
     );
-    res.json({ status: 'success', data: result.rows });
-  } catch (err) {
-    next(err);
+    return res.json({ status: 'success', data: result.rows });
   }
-});
-
-// GET /api/products
-router.get('/products', async (req, res, next) => {
-  try {
+  
+  if (req.method === 'GET' && resource === 'products' && segments.length === 0) {
     const result = await pool.query(
       'SELECT id, name, category FROM products ORDER BY name'
     );
-    res.json({ status: 'success', data: result.rows });
-  } catch (err) {
-    next(err);
+    return res.json({ status: 'success', data: result.rows });
   }
-});
 
-module.exports = router;
+  throw NotFound();
+};

@@ -1,17 +1,8 @@
 'use strict';
 
-const { Router } = require('express');
 const pool = require('../config/db');
+const { NotFound } = require('../utils/errors');
 
-const router = Router();
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-/**
- * Maps each supervisor role to the role of their direct subordinate.
- * @param {string} supervisorRole - 'dm' | 'rsm' | 'mm'
- * @returns {string|undefined} subordinate role, or undefined if not a supervisor
- */
 function subordinateRole(supervisorRole) {
   const map = {
     dm:  'mr',
@@ -21,13 +12,6 @@ function subordinateRole(supervisorRole) {
   return map[supervisorRole];
 }
 
-/**
- * Returns true only when approverRole is the direct supervisor of ownerRole.
- * DM supervises MR, RSM supervises DM, MM supervises RSM.
- * @param {string} approverRole
- * @param {string} ownerRole
- * @returns {boolean}
- */
 function isDirectSupervisor(approverRole, ownerRole) {
   const hierarchy = {
     dm:  'mr',
@@ -37,121 +21,49 @@ function isDirectSupervisor(approverRole, ownerRole) {
   return hierarchy[approverRole] === ownerRole;
 }
 
-// ─── GET /api/call-lists ──────────────────────────────────────────────────────
-
-router.get('/', async (req, res, next) => {
-  try {
+module.exports = async function callListHandler(req, res, segments) {
+  // GET /api/call-lists
+  if (req.method === 'GET' && segments.length === 0) {
     const { id: userId, role } = req.user;
 
     if (role === 'mr') {
-      // MR sees only their own call lists
       const result = await pool.query(
-        `SELECT id, user_id, month, status, approved_by, reason, created_at, updated_at
-           FROM call_lists
-          WHERE user_id = $1
-          ORDER BY created_at DESC`,
+        `SELECT cl.id, cl.user_id, cl.month, cl.status, cl.approved_by, cl.reason,
+                cl.created_at, cl.updated_at,
+                (SELECT COUNT(*) FROM call_list_doctors cld WHERE cld.call_list_id = cl.id) AS doctor_count
+           FROM call_lists cl
+          WHERE cl.user_id = $1
+          ORDER BY cl.created_at DESC`,
         [userId]
       );
       return res.json({ status: 'success', data: result.rows });
     }
 
-    // DM / RSM / MM see submitted call lists of their direct subordinates
     const subRole = subordinateRole(role);
     if (!subRole) {
-      // Should never happen given auth middleware; guard just in case
       return res.status(403).json({ status: 'error', message: 'Forbidden' });
     }
 
     const result = await pool.query(
       `SELECT cl.id, cl.user_id, cl.month, cl.status, cl.approved_by, cl.reason,
-              cl.created_at, cl.updated_at
+              cl.created_at, cl.updated_at,
+              u.name AS user_name,
+              (SELECT COUNT(*) FROM call_list_doctors cld WHERE cld.call_list_id = cl.id) AS doctor_count
          FROM call_lists cl
          JOIN users u ON u.id = cl.user_id
-        WHERE cl.status = 'submitted'
+        WHERE cl.status IN ('submitted', 'pending_approval')
           AND u.role = $1
         ORDER BY cl.created_at DESC`,
       [subRole]
     );
     return res.json({ status: 'success', data: result.rows });
-  } catch (err) {
-    next(err);
   }
-});
 
-// ─── GET /api/call-lists/:id ──────────────────────────────────────────────────
-
-router.get('/:id', async (req, res, next) => {
-  try {
-    const { id: userId, role } = req.user;
-    const callListId = parseInt(req.params.id, 10);
-
-    // 1. Fetch the call list
-    const clResult = await pool.query(
-      `SELECT id, user_id, month, status, approved_by, reason, created_at, updated_at
-         FROM call_lists
-        WHERE id = $1`,
-      [callListId]
-    );
-
-    if (clResult.rows.length === 0) {
-      return res.status(404).json({ status: 'error', message: 'Call list not found' });
-    }
-
-    const callList = clResult.rows[0];
-
-    // 2. Ownership / hierarchy check
-    if (role === 'mr') {
-      if (callList.user_id !== userId) {
-        return res.status(403).json({ status: 'error', message: 'Forbidden' });
-      }
-    } else {
-      // DM / RSM / MM — verify direct supervisor relationship
-      const ownerResult = await pool.query(
-        'SELECT role FROM users WHERE id = $1',
-        [callList.user_id]
-      );
-
-      if (ownerResult.rows.length === 0) {
-        return res.status(404).json({ status: 'error', message: 'Call list owner not found' });
-      }
-
-      const ownerRole = ownerResult.rows[0].role;
-      if (!isDirectSupervisor(role, ownerRole)) {
-        return res.status(403).json({ status: 'error', message: 'Forbidden' });
-      }
-    }
-
-    // 3. Fetch associated doctors
-    const doctorsResult = await pool.query(
-      `SELECT mc.id, mc.name, mc.specialization, mc.address, mc.phone
-         FROM call_list_doctors cld
-         JOIN master_customers mc ON mc.id = cld.master_customer_id
-        WHERE cld.call_list_id = $1
-        ORDER BY mc.name`,
-      [callListId]
-    );
-
-    // 4. Return combined response
-    return res.json({
-      status: 'success',
-      data: {
-        ...callList,
-        doctors: doctorsResult.rows,
-      },
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-// ─── POST /api/call-lists ─────────────────────────────────────────────────────
-
-router.post('/', async (req, res, next) => {
-  try {
+  // POST /api/call-lists
+  if (req.method === 'POST' && segments.length === 0) {
     const { id: userId } = req.user;
     const { month, doctor_ids } = req.body;
 
-    // 1. Validate required fields
     if (!month || !Array.isArray(doctor_ids) || doctor_ids.length === 0) {
       return res.status(422).json({
         status: 'error',
@@ -159,10 +71,8 @@ router.post('/', async (req, res, next) => {
       });
     }
 
-    // 2. Normalize month to DATE-compatible string (YYYY-MM-01)
     const monthDate = month + '-01';
 
-    // 3. Validate all doctor_ids exist in master_customers
     const validCheckResult = await pool.query(
       `SELECT id FROM master_customers WHERE id = ANY($1::int[])`,
       [doctor_ids]
@@ -174,7 +84,6 @@ router.post('/', async (req, res, next) => {
       });
     }
 
-    // 4. Check for existing call_list for this user + month
     const existingResult = await pool.query(
       `SELECT id, status FROM call_lists WHERE user_id = $1 AND month = $2`,
       [userId, monthDate]
@@ -192,18 +101,10 @@ router.post('/', async (req, res, next) => {
         });
       }
 
-      // Draft exists — replace doctors
       callListId = existing.id;
-      await pool.query(
-        `DELETE FROM call_list_doctors WHERE call_list_id = $1`,
-        [callListId]
-      );
-      await pool.query(
-        `UPDATE call_lists SET updated_at = NOW() WHERE id = $1`,
-        [callListId]
-      );
+      await pool.query(`DELETE FROM call_list_doctors WHERE call_list_id = $1`, [callListId]);
+      await pool.query(`UPDATE call_lists SET updated_at = NOW() WHERE id = $1`, [callListId]);
     } else {
-      // No existing — create new call list
       const insertResult = await pool.query(
         `INSERT INTO call_lists (user_id, month, status, created_at, updated_at)
          VALUES ($1, $2, 'draft', NOW(), NOW())
@@ -213,7 +114,6 @@ router.post('/', async (req, res, next) => {
       callListId = insertResult.rows[0].id;
     }
 
-    // 5. Insert doctors
     for (const doctorId of doctor_ids) {
       await pool.query(
         `INSERT INTO call_list_doctors (call_list_id, master_customer_id)
@@ -223,7 +123,6 @@ router.post('/', async (req, res, next) => {
       );
     }
 
-    // 6. Fetch and return the updated call list with doctors
     const callListResult = await pool.query(
       `SELECT id, user_id, month, status, approved_by, reason, created_at, updated_at
          FROM call_lists WHERE id = $1`,
@@ -246,19 +145,64 @@ router.post('/', async (req, res, next) => {
         doctors: doctorsResult.rows,
       },
     });
-  } catch (err) {
-    next(err);
   }
-});
 
-// ─── PATCH /api/call-lists/:id/submit ────────────────────────────────────────
+  // GET /api/call-lists/:id
+  if (req.method === 'GET' && segments.length === 1) {
+    const { id: userId, role } = req.user;
+    const callListId = parseInt(segments[0], 10);
 
-router.patch('/:id/submit', async (req, res, next) => {
-  try {
+    const clResult = await pool.query(
+      `SELECT id, user_id, month, status, approved_by, reason, created_at, updated_at
+         FROM call_lists
+        WHERE id = $1`,
+      [callListId]
+    );
+
+    if (clResult.rows.length === 0) {
+      return res.status(404).json({ status: 'error', message: 'Call list not found' });
+    }
+
+    const callList = clResult.rows[0];
+
+    if (role === 'mr') {
+      if (callList.user_id !== userId) {
+        return res.status(403).json({ status: 'error', message: 'Forbidden' });
+      }
+    } else {
+      const ownerResult = await pool.query('SELECT role FROM users WHERE id = $1', [callList.user_id]);
+      if (ownerResult.rows.length === 0) {
+        return res.status(404).json({ status: 'error', message: 'Call list owner not found' });
+      }
+      const ownerRole = ownerResult.rows[0].role;
+      if (!isDirectSupervisor(role, ownerRole)) {
+        return res.status(403).json({ status: 'error', message: 'Forbidden' });
+      }
+    }
+
+    const doctorsResult = await pool.query(
+      `SELECT mc.id, mc.name, mc.specialization, mc.address, mc.phone
+         FROM call_list_doctors cld
+         JOIN master_customers mc ON mc.id = cld.master_customer_id
+        WHERE cld.call_list_id = $1
+        ORDER BY mc.name`,
+      [callListId]
+    );
+
+    return res.json({
+      status: 'success',
+      data: {
+        ...callList,
+        doctors: doctorsResult.rows,
+      },
+    });
+  }
+
+  // PATCH /api/call-lists/:id/submit
+  if (req.method === 'PATCH' && segments.length === 2 && segments[1] === 'submit') {
     const { id: userId } = req.user;
-    const callListId = parseInt(req.params.id, 10);
+    const callListId = parseInt(segments[0], 10);
 
-    // 1. Fetch the call list
     const clResult = await pool.query(
       `SELECT id, user_id, month, status, approved_by, reason, created_at, updated_at
          FROM call_lists WHERE id = $1`,
@@ -271,12 +215,10 @@ router.patch('/:id/submit', async (req, res, next) => {
 
     const callList = clResult.rows[0];
 
-    // 2. Ownership check
     if (callList.user_id !== userId) {
       return res.status(403).json({ status: 'error', message: 'Forbidden' });
     }
 
-    // 3. Must be in draft status to submit
     if (callList.status !== 'draft') {
       return res.status(422).json({
         status: 'error',
@@ -284,7 +226,6 @@ router.patch('/:id/submit', async (req, res, next) => {
       });
     }
 
-    // 4. Update status to submitted
     const updateResult = await pool.query(
       `UPDATE call_lists
           SET status = 'submitted', updated_at = NOW()
@@ -293,23 +234,19 @@ router.patch('/:id/submit', async (req, res, next) => {
       [callListId]
     );
 
+    await pool.query(`UPDATE call_lists SET status = 'pending_approval', updated_at = NOW() WHERE id = $1`, [callListId]);
+
     return res.status(200).json({
       status: 'success',
       data: updateResult.rows[0],
     });
-  } catch (err) {
-    next(err);
   }
-});
 
-// ─── PATCH /api/call-lists/:id/approve ───────────────────────────────────────
-
-router.patch('/:id/approve', async (req, res, next) => {
-  try {
+  // PATCH /api/call-lists/:id/approve
+  if (req.method === 'PATCH' && segments.length === 2 && segments[1] === 'approve') {
     const { id: approverId, role: approverRole } = req.user;
-    const callListId = parseInt(req.params.id, 10);
+    const callListId = parseInt(segments[0], 10);
 
-    // 1. Fetch the call list
     const clResult = await pool.query(
       `SELECT id, user_id, month, status, approved_by, reason, created_at, updated_at
          FROM call_lists WHERE id = $1`,
@@ -322,34 +259,26 @@ router.patch('/:id/approve', async (req, res, next) => {
 
     const callList = clResult.rows[0];
 
-    // 2. Fetch owner role from users table
-    const ownerResult = await pool.query(
-      'SELECT role FROM users WHERE id = $1',
-      [callList.user_id]
-    );
-
+    const ownerResult = await pool.query('SELECT role FROM users WHERE id = $1', [callList.user_id]);
     if (ownerResult.rows.length === 0) {
       return res.status(404).json({ status: 'error', message: 'Call list owner not found' });
     }
 
     const ownerRole = ownerResult.rows[0].role;
 
-    // 3. Check direct supervisor relationship
     if (!isDirectSupervisor(approverRole, ownerRole)) {
       return res.status(403).json({ status: 'error', message: 'Forbidden' });
     }
 
-    // 4. Only submitted call lists can be approved or rejected
-    if (callList.status !== 'submitted') {
+    if (!['submitted', 'pending_approval'].includes(callList.status)) {
       return res.status(422).json({
         status: 'error',
-        message: 'Only submitted call lists can be approved or rejected',
+        message: 'Only submitted or pending_approval call lists can be approved or rejected',
       });
     }
 
     const { status: newStatus, reason } = req.body;
 
-    // 5. Validate rejection requires a non-empty reason
     if (newStatus === 'rejected') {
       if (!reason || reason.trim() === '') {
         return res.status(422).json({
@@ -358,7 +287,6 @@ router.patch('/:id/approve', async (req, res, next) => {
         });
       }
 
-      // Rejected → reset to draft, store reason and approved_by
       const updateResult = await pool.query(
         `UPDATE call_lists
             SET status = 'draft', reason = $1, approved_by = $2, updated_at = NOW()
@@ -373,7 +301,6 @@ router.patch('/:id/approve', async (req, res, next) => {
       });
     }
 
-    // 6. Approve
     const updateResult = await pool.query(
       `UPDATE call_lists
           SET status = 'approved', reason = NULL, approved_by = $1, updated_at = NOW()
@@ -386,9 +313,7 @@ router.patch('/:id/approve', async (req, res, next) => {
       status: 'success',
       data: updateResult.rows[0],
     });
-  } catch (err) {
-    next(err);
   }
-});
 
-module.exports = router;
+  throw NotFound();
+};

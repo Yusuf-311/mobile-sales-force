@@ -235,21 +235,21 @@ Implementasi monorepo full-stack MSF dalam urutan: infrastruktur → database �
   - [-] 7.7 Checkpoint — Call Actual routes + backend complete
     - Ensure all tests pass, ask the user if questions arise.
 
-- [~] 8. Frontend Core
-  - [~] 8.1 Buat `frontend/vite.config.js` dan `frontend/src/main.jsx`
+- [x] 8. Frontend Core
+  - [x] 8.1 Buat `frontend/vite.config.js` dan `frontend/src/main.jsx`
     - `vite.config.js`: gunakan `@vitejs/plugin-react` untuk Fast Refresh; konfigurasi proxy `server.proxy: { '/api': { target: 'http://localhost:3000', changeOrigin: true } }` agar semua request `/api/*` diteruskan ke backend saat dev; jaga file tetap minimal (hanya plugin + proxy)
     - `frontend/index.html`: entry point HTML standar Vite
     - `main.jsx`: render `<App />` ke `document.getElementById('root')`, wrap dengan `<AuthProvider>`
     - _Requirements: 14.1_
 
-  - [~] 8.2 Buat `frontend/src/api/axiosClient.js`
+  - [x] 8.2 Buat `frontend/src/api/axiosClient.js`
     - Buat Axios instance dengan `baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000'` — gunakan `import.meta.env.VITE_API_URL`, bukan URL yang dihardcode
     - Request interceptor: baca `localStorage.getItem('token')`, inject `Authorization: Bearer <token>`
     - Response interceptor: pada status 401 → `localStorage.clear()` + `window.location.href = '/login'`
     - Export sebagai default
     - _Requirements: 1.3, 1.4_
 
-  - [~] 8.3 Buat `frontend/src/context/AuthContext.jsx`
+  - [x] 8.3 Buat `frontend/src/context/AuthContext.jsx`
     - Definisikan array `USERS` dengan 5 user (label, role, token)
     - State `user` diinisialisasi dari `localStorage` (token, role, userName)
     - Fungsi `login(selectedUser)`: simpan ke localStorage + update state
@@ -257,24 +257,24 @@ Implementasi monorepo full-stack MSF dalam urutan: infrastruktur → database �
     - Export `AuthProvider`, `AuthContext`, `useAuth`
     - _Requirements: 1.3_
 
-  - [~] 8.4 Buat `frontend/src/router/AppRouter.jsx`
+  - [x] 8.4 Buat `frontend/src/router/AppRouter.jsx`
     - Definisikan `PrivateRoute`: jika `user` null → `<Navigate to="/login" replace />`
     - Routes: `/login`, `/call-lists`, `/call-plans`, `/call-actuals`, `*` redirect ke `/call-lists`
     - Semua route kecuali `/login` dibungkus `<PrivateRoute>`
     - _Requirements: 1.3_
 
-  - [~] 8.5 Buat `frontend/src/App.jsx`
+  - [x] 8.5 Buat `frontend/src/App.jsx`
     - Render `<AppRouter />` sebagai root component
     - Sertakan `ToastContext` provider (atau state Toast lokal) yang menyediakan `showToast` ke seluruh aplikasi
     - Tambahkan komponen NavBar dengan `<nav>` semantik yang memuat links ke `/call-lists`, `/call-plans`, `/call-actuals`, tombol logout, dan nama/role pengguna saat ini; NavBar hanya ditampilkan saat user sudah login
     - _Requirements: 10.6, 11.6, 12.9_
 
-  - [~] 8.6 Buat common components: `Spinner.jsx` dan `Toast.jsx`
+  - [x] 8.6 Buat common components: `Spinner.jsx` dan `Toast.jsx`
     - `Spinner.jsx`: div dengan class `spinner`, `aria-label="Loading..."`, `role="status"`; CSS: circular border animation, centered
     - `Toast.jsx`: komponen notification transient (sukses/error) dengan auto-dismiss 3 detik; variant `success` (hijau) dan `error` (merah); posisi fixed top screen
     - _Requirements: 10.5, 10.6, 11.5, 12.8_
 
-  - [ ] 8.7a Buat custom hooks di `frontend/src/hooks/`
+  - [x] 8.7a Buat custom hooks di `frontend/src/hooks/`
     - Buat `useCallLists.js`: `useState` untuk `data`, `loading`, `error`; `useEffect` untuk initial fetch dari `GET /api/call-lists`; expose fungsi `refresh()` yang memanggil ulang fetch; komponen halaman wajib menggunakan hook ini alih-alih inline fetch
     - Buat `useCallPlans.js`: struktur serupa; initial fetch dari `GET /api/call-plans`; expose `refresh()`
     - Buat `useCallActuals.js`: struktur serupa; initial fetch dari `GET /api/call-actuals`; expose `refresh()`
@@ -283,11 +283,11 @@ Implementasi monorepo full-stack MSF dalam urutan: infrastruktur → database �
     - Setiap hook: pisahkan logika data fetching dari rendering — komponen hanya konsumsi data dari hook, tidak ada `axios.get` langsung di dalam komponen halaman
     - _Requirements: 10.1, 10.3, 11.1, 11.3, 12.1, 12.7_
 
-  - [~] 8.7 Checkpoint — Frontend core
+  - [x] 8.7 Checkpoint — Frontend core
     - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 9. Frontend Pages — Login
-  - [~] 9.1 Buat `frontend/src/pages/LoginPage.jsx`
+- [x] 9. Frontend Pages — Login
+  - [x] 9.1 Buat `frontend/src/pages/LoginPage.jsx`
     - Gunakan elemen semantik: `<main>` sebagai wrapper halaman, `<section>` untuk grid kartu
     - Tampilkan judul "Mobile Sales Force — PT Mersifarma" dan subtitle
     - Render grid 5 card (Andi MR1, Sari MR2, Doni DM, Citra RSM, Budi MM) menggunakan `<button>` (bukan `<div>`) untuk setiap card; min touch target 44×44px
@@ -297,8 +297,8 @@ Implementasi monorepo full-stack MSF dalam urutan: infrastruktur → database �
     - Mobile-first CSS: cards responsif mulai 375px, min touch target 44px, setiap interactive element memiliki visible focus ring dan hover state
     - _Requirements: 1.3_
 
-- [ ] 10. Frontend Pages — Call List
-  - [~] 10.1 Buat `frontend/src/components/CallListForm.jsx`
+- [x] 10. Frontend Pages — Call List
+  - [x] 10.1 Buat `frontend/src/components/CallListForm.jsx`
     - Hanya tampil jika `role === 'mr'`
     - Gunakan elemen semantik: `<form>` sebagai wrapper, bukan `<div>`
     - `<input type="month">` untuk bulan (required) — controlled input dengan `useState`
@@ -308,7 +308,7 @@ Implementasi monorepo full-stack MSF dalam urutan: infrastruktur → database �
     - Tampilkan Spinner saat loading, disable button
     - _Requirements: 10.1, 10.2, 10.5, 10.6, 10.7_
 
-  - [~] 10.2 Buat `frontend/src/components/CallListTable.jsx`
+  - [x] 10.2 Buat `frontend/src/components/CallListTable.jsx`
     - Gunakan elemen semantik: `<section>` sebagai wrapper, `<table>` dengan `role="region"` dan `aria-label` deskriptif; header kolom menggunakan `<th scope="col">`
     - Kolom MR view: ID, Bulan, Status (badge warna), Jumlah Dokter, Aksi
     - Kolom DM/RSM/MM view: ID, MR, Bulan, Status (badge), Jumlah Dokter, Aksi
@@ -320,15 +320,15 @@ Implementasi monorepo full-stack MSF dalam urutan: infrastruktur → database �
     - `overflow-x: auto` wrapper untuk mobile scroll
     - _Requirements: 10.3, 10.4_
 
-  - [~] 10.3 Buat `frontend/src/pages/CallListPage.jsx`
+  - [x] 10.3 Buat `frontend/src/pages/CallListPage.jsx`
     - Gunakan `<main>` sebagai wrapper halaman
     - Gunakan hook `useCallLists()` untuk data dan refresh; jangan fetch inline di dalam komponen
     - Render `<CallListForm />` + `<CallListTable data={callLists} onRefresh={refresh} />`
     - Terapkan loading state dan error handling dari hook
     - _Requirements: 10.1, 10.2, 10.3, 10.4_
 
-- [ ] 11. Frontend Pages — Call Plan
-  - [~] 11.1 Buat `frontend/src/components/CallPlanForm.jsx`
+- [x] 11. Frontend Pages — Call Plan
+  - [x] 11.1 Buat `frontend/src/components/CallPlanForm.jsx`
     - Gunakan `<form>` sebagai wrapper semantik
     - Dropdown approved Call List: gunakan `useCallLists()`, filter client-side ke status `approved`; controlled input dengan `useState`
     - Saat Call List dipilih: fetch `GET /api/call-lists/:id` untuk ambil daftar dokter, populate Doctor dropdown
@@ -339,21 +339,21 @@ Implementasi monorepo full-stack MSF dalam urutan: infrastruktur → database �
     - Spinner + disabled button saat loading
     - _Requirements: 11.1, 11.2, 11.4, 11.5, 11.6_
 
-  - [~] 11.2 Buat `frontend/src/components/CallPlanTable.jsx`
+  - [x] 11.2 Buat `frontend/src/components/CallPlanTable.jsx`
     - Gunakan `<table>` dengan `role="region"` dan `aria-label`; header kolom `<th scope="col">`
     - Kolom: ID, Call List, Dokter, Tanggal, Waktu
     - `overflow-x: auto` wrapper
     - _Requirements: 11.3_
 
-  - [~] 11.3 Buat `frontend/src/pages/CallPlanPage.jsx`
+  - [x] 11.3 Buat `frontend/src/pages/CallPlanPage.jsx`
     - Gunakan `<main>` sebagai wrapper halaman
     - Hanya accessible untuk role `mr` (redirect jika bukan)
     - Gunakan hook `useCallPlans()` untuk data dan refresh
     - Render `<CallPlanForm />` + `<CallPlanTable />`
     - _Requirements: 11.1, 11.3, 11.7_
 
-- [ ] 12. Frontend Pages — Call Actual
-  - [~] 12.1 Buat `frontend/src/components/CallActualForm.jsx`
+- [x] 12. Frontend Pages — Call Actual
+  - [x] 12.1 Buat `frontend/src/components/CallActualForm.jsx`
     - Gunakan `<form>` sebagai wrapper semantik
     - Mode selector (radio/tabs): **Terencana** | **Unplan** | **Non Target** — controlled dengan `useState`
     - Mode Terencana: dropdown Call Plan menggunakan `useCallPlans()`; doctor field auto-fill read-only dari plan
@@ -367,46 +367,46 @@ Implementasi monorepo full-stack MSF dalam urutan: infrastruktur → database �
     - Spinner + disabled button saat loading
     - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.5, 12.6, 12.8, 12.9_
 
-  - [~] 12.2 Buat `frontend/src/components/CallActualTable.jsx`
+  - [x] 12.2 Buat `frontend/src/components/CallActualTable.jsx`
     - Gunakan `<table>` dengan `role="region"` dan `aria-label`; header kolom `<th scope="col">`
     - Kolom: ID, Dokter, Tanggal, Tipe Kunjungan, Status (badge)
     - Badge: `in_progress`=kuning, `completed`=hijau
     - `overflow-x: auto` wrapper
     - _Requirements: 12.7_
 
-  - [~] 12.3 Buat `frontend/src/pages/CallActualPage.jsx`
+  - [x] 12.3 Buat `frontend/src/pages/CallActualPage.jsx`
     - Gunakan `<main>` sebagai wrapper halaman
     - Hanya accessible untuk role `mr`
     - Gunakan hook `useCallActuals()` untuk data dan refresh
     - Render `<CallActualForm />` + `<CallActualTable />`
     - _Requirements: 12.1, 12.6, 12.10_
 
-  - [~] 12.4 Checkpoint — Semua halaman frontend
+  - [x] 12.4 Checkpoint — Semua halaman frontend
     - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 13. Frontend Tests
-  - [ ]* 13.1 Tulis unit test untuk `axiosClient`
+- [x] 13. Frontend Tests
+  - [x]* 13.1 Tulis unit test untuk `axiosClient`
     - Test request interceptor: jika localStorage berisi token → header `Authorization: Bearer <token>` disertakan
     - Test response interceptor: response dengan status 401 → localStorage dibersihkan + redirect ke `/login`
     - _Requirements: 1.3, 1.4_
 
-  - [ ]* 13.2 Tulis unit test untuk `LoginPage`
+  - [x]* 13.2 Tulis unit test untuk `LoginPage`
     - Test: klik card user → token yang benar tersimpan di localStorage + navigate ke `/call-lists`
     - Gunakan Vitest + React Testing Library + `userEvent`
     - _Requirements: 1.3_
 
-  - [ ]* 13.3 Tulis unit test untuk `PrivateRoute`
+  - [x]* 13.3 Tulis unit test untuk `PrivateRoute`
     - Test: user tidak terautentikasi (tidak ada token di localStorage) → redirect ke `/login`
     - Test: user terautentikasi → children dirender
     - _Requirements: 1.3_
 
-  - [ ]* 13.4 Tulis unit test untuk `CallActualForm` — mode switching
+  - [x]* 13.4 Tulis unit test untuk `CallActualForm` — mode switching
     - Test: mode default 'Terencana' → tampilkan Call Plan dropdown; doctor field read-only
     - Test: switch ke 'Unplan' → Call Plan dropdown hilang; tampilkan Doctor dropdown
     - Test: switch ke 'Non Target' → tampilkan Doctor dropdown
     - _Requirements: 12.1, 12.2_
 
-  - [~] 13.5 Checkpoint — Backend tests + frontend tests selesai
+  - [x] 13.5 Checkpoint — Backend tests + frontend tests selesai
     - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 14. Backend Property Tests — Lanjutan
@@ -425,8 +425,8 @@ Implementasi monorepo full-stack MSF dalam urutan: infrastruktur → database �
     - **Validates: Requirements 14.5**
     - Generate berbagai request yang menghasilkan 4xx; verifikasi semua response body mengandung field `status` dan `message`
 
-- [ ] 15. Dokumentasi
-  - [~] 15.1 Buat `README.md` di root monorepo
+- [x] 15. Dokumentasi
+  - [x] 15.1 Buat `README.md` di root monorepo
     - Bagian Prerequisites: Node.js 18+, PostgreSQL, psql
     - Bagian Backend Setup: (1) copy .env.example → .env, isi DATABASE_URL; (2) `psql -f backend/db/schema.sql`; (3) `node backend/db/seed.js`; (4) `node backend/server.js`
     - Bagian Frontend Setup: (1) copy .env.example → .env; (2) `cd frontend && npm install && npm run dev`
@@ -442,8 +442,16 @@ Implementasi monorepo full-stack MSF dalam urutan: infrastruktur → database �
     - Bagian **Refleksi & Tools** (wajib, bobot 5%): tuliskan secara singkat: (1) tools yang digunakan dan untuk apa, (2) contoh output tools yang diterima vs ditolak beserta alasannya, (3) pendekatan validasi output tools sebelum dipakai di dalam kode, (4) arsitektur singkat dan cara menjalankan aplikasi
     - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 14.1, 14.2_
 
-  - [~] 15.2 Checkpoint Final
+  - [x] 15.2 Checkpoint Final
     - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 16. Phase 2: Migrate to Pure Node.js
+  - [x] 16.1 Hapus Express dan dependensi terkait
+  - [x] 16.2 Implementasi custom HTTP request handler di `app.js`
+  - [x] 16.3 Refactor middleware `auth.js` untuk environment native Node
+  - [x] 16.4 Refactor semua rute (MCL, Call List, Call Plan, Call Actual) tanpa `express.Router`
+  - [x] 16.5 Update tests agar kompatibel dengan native Node `http.createServer`
+  - [x] 16.6 Update `README.md` untuk menghilangkan Express
 
 ---
 

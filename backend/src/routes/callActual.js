@@ -1,24 +1,10 @@
 'use strict';
 
-const { Router } = require('express');
 const pool = require('../config/db');
+const { NotFound } = require('../utils/errors');
 
-const router = Router();
-
-/**
- * Resolves the visit type for a call actual.
- *
- * @param {number|null} planId     - ID of the call plan, or null for unplanned visits
- * @param {number}      userId     - ID of the authenticated MR user
- * @param {number}      doctorId   - ID of the doctor being visited
- * @param {string}      visitDate  - ISO date string for the visit date
- * @param {object}      db         - pg Pool/Client with a .query() method
- * @returns {Promise<'plan'|'unplan'|'non_target'>}
- * @throws {{ statusCode: number, message: string }} on validation failure
- */
 async function resolveVisitType(planId, userId, doctorId, visitDate, db) {
   if (planId) {
-    // plan branch: fetch the plan and validate ownership + doctor match
     const planResult = await db.query(
       'SELECT id, user_id, doctor_id FROM call_plans WHERE id = $1',
       [planId]
@@ -41,7 +27,6 @@ async function resolveVisitType(planId, userId, doctorId, visitDate, db) {
     return 'plan';
   }
 
-  // plan_id is null: check if doctor is in an approved call list for this month
   const unplanCheck = await db.query(
     `SELECT cld.id FROM call_list_doctors cld
      JOIN call_lists cl ON cl.id = cld.call_list_id
@@ -56,7 +41,6 @@ async function resolveVisitType(planId, userId, doctorId, visitDate, db) {
     return 'unplan';
   }
 
-  // Check if doctor exists in master_customers at all
   const mclCheck = await db.query(
     'SELECT id FROM master_customers WHERE id = $1',
     [doctorId]
@@ -69,10 +53,9 @@ async function resolveVisitType(planId, userId, doctorId, visitDate, db) {
   throw { statusCode: 422, message: 'Doctor not found in master customer list' };
 }
 
-// ─── POST /api/call-actuals ───────────────────────────────────────────────────
-
-router.post('/', async (req, res, next) => {
-  try {
+module.exports = async function callActualHandler(req, res, segments) {
+  // POST /api/call-actuals
+  if (req.method === 'POST' && segments.length === 0) {
     const { id: userId } = req.user;
     const {
       plan_id,
@@ -80,12 +63,11 @@ router.post('/', async (req, res, next) => {
       visit_date,
       check_in_time,
       check_out_time,
-      photo_url,
-      signature_url,
       detailing,
+      photo_url,
+      signature_url
     } = req.body;
 
-    // 1. Validate required fields
     if (!doctor_id || !visit_date) {
       return res.status(422).json({
         status: 'error',
@@ -93,31 +75,26 @@ router.post('/', async (req, res, next) => {
       });
     }
 
-    // 2. Validate photo_url not empty
-    if (!photo_url || photo_url.trim() === '') {
-      return res.status(422).json({
-        status: 'error',
-        message: 'photo_url is required',
-      });
+    if (!photo_url || !signature_url) {
+      return res.status(422).json({ status: 'error', message: 'photo_url and signature_url are required' });
     }
 
-    // 3. Validate signature_url not empty
-    if (!signature_url || signature_url.trim() === '') {
-      return res.status(422).json({
-        status: 'error',
-        message: 'signature_url is required',
-      });
+    let detailingParsed = detailing;
+    if (typeof detailingParsed === 'string') {
+      try {
+        detailingParsed = JSON.parse(detailingParsed);
+      } catch (e) {
+        detailingParsed = null;
+      }
     }
 
-    // 4. Validate detailing array has at least 1 item
-    if (!Array.isArray(detailing) || detailing.length === 0) {
+    if (!Array.isArray(detailingParsed) || detailingParsed.length === 0) {
       return res.status(422).json({
         status: 'error',
         message: 'detailing must be a non-empty array',
       });
     }
 
-    // 5. Check for duplicate (user_id, doctor_id, visit_date)
     const dupCheck = await pool.query(
       'SELECT id FROM call_actuals WHERE user_id = $1 AND doctor_id = $2 AND visit_date = $3',
       [userId, doctor_id, visit_date]
@@ -129,7 +106,6 @@ router.post('/', async (req, res, next) => {
       });
     }
 
-    // 6. Resolve visit type
     let visit_type;
     try {
       visit_type = await resolveVisitType(plan_id || null, userId, doctor_id, visit_date, pool);
@@ -140,20 +116,18 @@ router.post('/', async (req, res, next) => {
       throw err;
     }
 
-    // 7. INSERT into call_actuals
     const insertResult = await pool.query(
       `INSERT INTO call_actuals
          (user_id, plan_id, doctor_id, visit_type, visit_date, check_in_time, check_out_time,
-          photo_url, signature_url, status, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'in_progress', NOW())
-       RETURNING id`,
+         photo_url, signature_url, status, created_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'in_progress', NOW())
+      RETURNING id`,
       [userId, plan_id || null, doctor_id, visit_type, visit_date, check_in_time || null, check_out_time || null, photo_url, signature_url]
     );
 
     const callActualId = insertResult.rows[0].id;
 
-    // 8. INSERT each product into call_actual_products
-    for (const item of detailing) {
+    for (const item of detailingParsed) {
       await pool.query(
         `INSERT INTO call_actual_products (call_actual_id, product_id) VALUES ($1, $2)
          ON CONFLICT DO NOTHING`,
@@ -161,7 +135,6 @@ router.post('/', async (req, res, next) => {
       );
     }
 
-    // 9. Fetch the full record with products joined
     const caResult = await pool.query(
       `SELECT id, user_id, plan_id, doctor_id, visit_type, visit_date,
               check_in_time, check_out_time, photo_url, signature_url, status, created_at
@@ -185,15 +158,10 @@ router.post('/', async (req, res, next) => {
         products: productsResult.rows,
       },
     });
-  } catch (err) {
-    next(err);
   }
-});
 
-// ─── GET /api/call-actuals ────────────────────────────────────────────────────
-
-router.get('/', async (req, res, next) => {
-  try {
+  // GET /api/call-actuals
+  if (req.method === 'GET' && segments.length === 0) {
     const { id: userId } = req.user;
 
     const result = await pool.query(
@@ -206,10 +174,9 @@ router.get('/', async (req, res, next) => {
     );
 
     return res.json({ status: 'success', data: result.rows });
-  } catch (err) {
-    next(err);
   }
-});
 
-module.exports = router;
+  throw NotFound();
+};
+
 module.exports.resolveVisitType = resolveVisitType;
