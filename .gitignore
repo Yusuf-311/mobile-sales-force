@@ -7,7 +7,6 @@ logs/
 
 # IDE / Local tooling
 .agents/
-.kiro/
 skills-lock.json
 
 # Local screenshots / media / exports
