@@ -2,20 +2,27 @@
 
 Aplikasi manajemen kunjungan tenaga penjual farmasi PT Mersifarma — monorepo full-stack untuk mengelola Call List, Call Plan, dan Call Actual secara digital.
 
+## Project Scope
+
+Repo ini berisi source code aplikasi utama untuk backend dan frontend MSF, termasuk alur login multi-role, pengelolaan call list, approval flow, dan pencatatan kunjungan aktual. Folder screenshot, export PDF/PPT, serta file generator yang bersifat lokal atau pendukung dokumentasi tidak dimasukkan ke repository.
+
+> Catatan: file seperti capture layar, dokumen presentasi, dan artefak lokal dikecualikan dari source control agar repository tetap fokus pada aplikasi yang benar-benar dipakai.
+
 ---
 
 ## Tech Stack
 
 **Backend**
+
 - **Node.js 18+** — runtime
-- **Native HTTP Module** — custom request handler & router (tanpa Express)
+- **Native HTTP Module** — custom request handler & router (tanpa framework tambahan)
 - **PostgreSQL 14+** — database relasional
 - **pg (node-postgres)** — database driver
 - **dotenv** — environment variable management
-- **cors** — Cross-Origin Resource Sharing
 - **Jest + Supertest** — backend testing
 
 **Frontend**
+
 - **React 18** — UI library
 - **Vite 5** — build tool + dev server + HMR
 - **React Router v6** — client-side routing
@@ -24,6 +31,7 @@ Aplikasi manajemen kunjungan tenaga penjual farmasi PT Mersifarma — monorepo f
 - **Vanilla CSS** — custom design system tokens (tanpa Tailwind)
 
 **Autentikasi**
+
 - Bearer token (hardcoded per user, tanpa JWT library)
 - 5 user bawaan: Andi (MR), Sari (MR), Doni (DM), Citra (RSM), Budi (MM)
 
@@ -117,7 +125,7 @@ cd frontend && npm test
 
 ```
 mobile-sales-force/
-├── backend/                Express + pg (Node.js)
+├── backend/                Node.js + pg
 │   ├── .env.example        Template environment variables
 │   ├── server.js           Entry point (listen port 3000)
 │   ├── db/
@@ -178,11 +186,13 @@ Setiap supervisor hanya bisa approve call list dari **bawahan langsungnya** (DM 
 ## Endpoint List
 
 **Master Data (tanpa auth role tertentu)**
+
 - `GET /health` — health check
 - `GET /api/mcl` — daftar master customers (dokter)
 - `GET /api/products` — daftar produk
 
 **Call List**
+
 - `POST /api/call-lists` — MR buat call list (bulan + doctor_ids)
 - `GET /api/call-lists` — MR: list sendiri; Supervisor: list submitted bawahan
 - `GET /api/call-lists/:id` — detail call list + daftar dokter
@@ -190,10 +200,12 @@ Setiap supervisor hanya bisa approve call list dari **bawahan langsungnya** (DM 
 - `PATCH /api/call-lists/:id/approve` — DM/RSM/MM approve atau reject
 
 **Call Plan**
+
 - `POST /api/call-plans` — MR buat call plan (CL harus approved)
 - `GET /api/call-plans` — list call plan milik MR
 
 **Call Actual**
+
 - `POST /api/call-actuals` — MR catat kunjungan aktual
 - `GET /api/call-actuals` — list kunjungan aktual milik MR
 
@@ -339,10 +351,11 @@ Expected: `403` — `"Forbidden"`
 ## Logging & Monitoring
 
 Aplikasi ini dilengkapi dengan **Custom Logger Utility** yang berjalan murni menggunakan Native Node.js `fs` module, tanpa dependensi eksternal (seperti Winston/Morgan), untuk melacak aktivitas sistem secara otomatis.
-- **`logs/activity.log`**: Mencatat semua HTTP request masuk (Endpoint, Method, Timestamp). Sangat berguna sebagai **Audit Trail** untuk melihat siapa yang melakukan approval atau submit data.
-- **`logs/error.log`**: Menangkap semua *Unhandled Exception*, *Database Error*, dan *HTTP Error*. Stack trace dan meta data akan di-serialize dan disimpan dengan aman. Sistem di-desain tangguh agar kebal terhadap *Circular JSON reference* saat logging.
 
-Semua file log ini *auto-generated* saat aplikasi pertama kali mendeteksi request/error.
+- **`logs/activity.log`**: Mencatat semua HTTP request masuk (Endpoint, Method, Timestamp). Sangat berguna sebagai **Audit Trail** untuk melihat siapa yang melakukan approval atau submit data.
+- **`logs/error.log`**: Menangkap semua _Unhandled Exception_, _Database Error_, dan _HTTP Error_. Stack trace dan meta data akan di-serialize dan disimpan dengan aman. Sistem di-desain tangguh agar kebal terhadap _Circular JSON reference_ saat logging.
+
+Semua file log ini _auto-generated_ saat aplikasi pertama kali mendeteksi request/error.
 
 ---
 

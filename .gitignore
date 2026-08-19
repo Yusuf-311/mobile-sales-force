@@ -10,6 +10,21 @@ logs/
 .kiro/
 skills-lock.json
 
-# Documents & Presentations
+# Local screenshots / media / exports
+images/
+screenshots/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+
+# Generated docs / presentations / local artifacts
+MSF_Technical_Documentation.md
 *.pdf
+*.ppt
 *.pptx
+generate_test_report.py
+make_ppt.py
+frontend/cypress_output.txt
+frontend/cypress/screenshots/

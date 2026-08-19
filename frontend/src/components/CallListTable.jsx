@@ -149,10 +149,10 @@ export default function CallListTable({ data, onRefresh }) {
             <tbody>
               {data.map((cl) => (
                 <tr key={cl.id}>
-                  <td style={{ color: 'var(--ink-muted)', fontFamily: 'monospace', fontSize: '0.8125rem' }}>#{cl.id}</td>
-                  {isSupervisor && <td>{cl.user_name || '—'}</td>}
-                  <td>{formatMonth(cl.month)}</td>
-                  <td>
+                  <td data-label="ID" style={{ color: 'var(--ink-muted)', fontFamily: 'monospace', fontSize: '0.8125rem' }}>#{cl.id}</td>
+                  {isSupervisor && <td data-label="MR">{cl.user_name || '—'}</td>}
+                  <td data-label="Bulan">{formatMonth(cl.month)}</td>
+                  <td data-label="Status">
                     <span className={`badge ${STATUS_BADGE[cl.status] || ''}`}>
                       {STATUS_LABELS[cl.status] || cl.status}
                     </span>
@@ -162,8 +162,8 @@ export default function CallListTable({ data, onRefresh }) {
                       </div>
                     )}
                   </td>
-                  <td>{cl.doctor_count ?? '—'}</td>
-                  <td>
+                  <td data-label="Dokter">{cl.doctor_count ?? '—'}</td>
+                  <td data-label="Aksi">
                     <div className="table-actions">
                       {/* MR: submit draft */}
                       {isMR && cl.status === 'draft' && (
